@@ -54,7 +54,7 @@ def main():
             logging.exception(f"Ошибка на дате {date_str}: {str(e)}")
             time.sleep(1)
 
-if name == "__main__":
+if __name__ == "__main__":
     while True:
         main()
         time.sleep(CHECK_INTERVAL_MINUTES * 60)
