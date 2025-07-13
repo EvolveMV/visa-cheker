@@ -1,43 +1,33 @@
 
-import json
-import requests
-import time
 import os
+import time
+import json
 import logging
+import requests
 from datetime import datetime, timedelta
 import telegram
 
-# Настройки
+# Настройка логирования
+logging.basicConfig(level=logging.INFO)
+
+# Константы
+DATES_TO_CHECK = 10
 CHECK_INTERVAL_MINUTES = 5
-DATES_TO_CHECK = 730  # Кол-во дней вперёд (2 года)
-LOCATION_ID = 89  # Calgary
-SCHEDULE_ID = 69194318
-BASE_URL = "https://ais.usvisa-info.com/en-ca/niv/schedule"
+
 HEADERS = {
-    "User-Agent": "Mozilla/5.0",
-    "Content-Type": "application/json"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
 }
 
-# Загрузка cookies из HAR-файла, экспортированного вручную
 def load_cookies():
     with open("cookies.json", "r", encoding="utf-8") as f:
-        raw = json.load(f)
-    session_cookies = {}
-    for entry in raw.get("log", {}).get("entries", []):
-        if "cookie" in entry.get("request", {}):
-            for cookie in entry["request"]["cookies"]:
-                session_cookies[cookie["name"]] = cookie["value"]
-    return session_cookies
+        return json.load(f)
 
-# Получение доступных слотов на дату
 def get_slots(session, date):
-    url = f"{BASE_URL}/{SCHEDULE_ID}/appointment/times/{LOCATION_ID}.json?date={date}&appointments[expedite]=false"
+    url = f"https://ais.usvisa-info.com/en-ca/niv/schedule/{date}"
     response = session.get(url)
-    if response.status_code == 200:
-        return response.json()
-    return None
+    response.raise_for_status()
+    return response.json().get("available_slots", [])
 
-# Отправка уведомления
 def notify(text):
     token = os.environ.get("TG_BOT_TOKEN")
     chat_id = os.environ.get("TG_CHAT_ID")
@@ -45,8 +35,8 @@ def notify(text):
         bot = telegram.Bot(token=token)
         bot.send_message(chat_id=chat_id, text=text)
 
-# Основная логика
 def main():
+    print(f"[{datetime.now()}] Проверка доступных дат...")  # Вывод в логи Railway
     session = requests.Session()
     cookies = load_cookies()
     session.cookies.update(cookies)
@@ -58,12 +48,13 @@ def main():
         try:
             slots = get_slots(session, date_str)
             if slots:
-                notify(f"🔵 Есть доступные даты на {date_str}: " + ", ".join([s["time"] for s in slots]))
+                message = f"🟢 Есть доступные даты: {date_str} - " + ", ".join([s["time"] for s in slots])
+                notify(message)
         except Exception as e:
             logging.exception(f"Ошибка на дате {date_str}: {str(e)}")
-        time.sleep(1)
+            time.sleep(1)
 
-if __name__ == "__main__":
+if name == "__main__":
     while True:
         main()
         time.sleep(CHECK_INTERVAL_MINUTES * 60)
