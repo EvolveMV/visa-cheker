@@ -20,5 +20,4 @@ if __name__ == "__main__":
     while True:
         check_appointments()
         time.sleep(300)  # каждые 5 минут
-from telegram import send_message
-send_message("✅ Railway бот запущен и готов к работе!")
+
