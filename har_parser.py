@@ -15,7 +15,7 @@ def check_visa_dates():
                     found_dates.append(entry.get("request", {}).get("url", ""))
 
         if found_dates:
-            message = "<b>🎯 Найдены даты до августа 2027!</b>
+            message = "<b>Найдены даты до августа 2027!</b>
 "
             message += "\n".join(found_dates[:5])
             return message
